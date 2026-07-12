@@ -196,7 +196,7 @@ const seedData = async () => {
 
     console.log("✅ Seed data created successfully");
     console.log("-----------------------------------");
-    console.log("Admin login:      admin@maintainiq.com / admin123");
+    console.log("Admin login:      admin@maintainiq.com / Admin123!");
     console.log("Technician login: tech@maintainiq.com / tech123");
     console.log("(And 3 other technicians with tech123)");
     console.log("-----------------------------------");
