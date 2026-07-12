@@ -14,7 +14,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
-  res.send('EquipSense API is running...');
+  res.send('Maintainiq API is running...');
 });
 
 app.use('/api/auth', require('../routes/authRoutes'));

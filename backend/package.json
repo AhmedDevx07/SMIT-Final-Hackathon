@@ -1,7 +1,7 @@
 {
-  "name": "equipSense-backend",
+  "name": "maintainiq-backend",
   "version": "1.0.0",
-  "description": "EquipSense - AI-Powered QR Maintenance & Asset History Platform (Backend)",
+  "description": "Maintainiq - AI-Powered QR Maintenance & Asset History Platform (Backend)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

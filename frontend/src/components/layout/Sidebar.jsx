@@ -24,7 +24,7 @@ const Sidebar = ({ navItems }) => {
     >
       <div className="sidebar-brand">
         <span className="brand-dot" />
-        EquipSense
+        Maintainiq
       </div>
 
       <nav className="sidebar-nav">

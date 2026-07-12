@@ -34,7 +34,7 @@ const Login = () => {
       >
         <div className="brand-glow" />
         <div className="brand-glow-2" />
-        <span className="brand-kicker">EquipSense Enterprise</span>
+        <span className="brand-kicker">Maintainiq Enterprise</span>
         <h1 className="brand-title">Scan. Diagnose.<br /><span>Resolve.</span></h1>
         <p className="brand-subtext">
           Empower your maintenance team with next-generation AI triage. 
@@ -121,10 +121,10 @@ const Login = () => {
             <strong>Demo Accounts:</strong><br /><br />
             Admin: <code>admin@maintainiq.com</code> / <code>Admin123!</code><br /><br />
             <strong>Technicians:</strong> (Password: <code>tech123</code>)<br />
-            <code>Ali@equipSense.com</code><br />
-            <code>sarah@equipSense.com</code><br />
-            <code>john@equipSense.com</code><br />
-            <code>maria@equipSense.com</code>
+            <code>Ali@maintainiq.com</code><br />
+            <code>sarah@maintainiq.com</code><br />
+            <code>john@maintainiq.com</code><br />
+            <code>maria@maintainiq.com</code>
           </div>
         </form>
       </motion.div>

@@ -15,7 +15,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
-  res.send("EquipSense API is running...");
+  res.send("maintainiq API is running...");
 });
 
 app.use("/api/auth", require("./routes/authRoutes"));
@@ -29,5 +29,5 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
-  console.log(`EquipSense server running on port ${PORT}`),
+  console.log(`Maintainiq server running on port ${PORT}`),
 );

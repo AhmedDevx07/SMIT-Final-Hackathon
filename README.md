@@ -1,4 +1,4 @@
-# EquipSense — AI-Powered QR Maintenance & Asset History Platform
+# Maintainiq — AI-Powered QR Maintenance & Asset History Platform
 
 Track A: Advanced Full-Stack + GenAI submission. Node/Express/MongoDB backend, React/Vite frontend, Redux Toolkit, Framer Motion, OpenAI-powered AI Issue Triage.
 
@@ -25,8 +25,8 @@ npm run dev              # starts on http://localhost:5173
 ```
 
 ## Demo Credentials
-- Admin: admin@equipSense.com / Admin123!
-- Technician: tech@equipSense.com / tech123
+- Admin: admin@maintainiq.com / Admin123!
+- Technician: tech@maintainiq.com / tech123
 
 ## Core Workflow Demonstrated
 1. Admin registers an asset → unique asset code + QR code auto-generated.

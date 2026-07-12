@@ -124,7 +124,7 @@ const PublicAssetPage = () => {
     <div className="public-page">
       <div className="public-container">
         <motion.div className="public-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <span className="public-kicker">EquipSense · Asset Record</span>
+          <span className="public-kicker">Maintainiq · Asset Record</span>
           <h1>{asset.name}</h1>
           <div className="public-badges">
             <span className={`status-pill ${STATUS_COLORS[asset.status] || 'status-muted'}`}>{asset.status}</span>
