@@ -119,7 +119,7 @@ const Login = () => {
 
           <div className="demo-creds">
             <strong>Demo Accounts:</strong><br /><br />
-            Admin: <code>admin@maintainiq.com</code> / <code>admin123</code><br /><br />
+            Admin: <code>admin@maintainiq.com</code> / <code>Admin123!</code><br /><br />
             <strong>Technicians:</strong> (Password: <code>tech123</code>)<br />
             <code>Ali@maintainiq.com</code><br />
             <code>sarah@maintainiq.com</code><br />
