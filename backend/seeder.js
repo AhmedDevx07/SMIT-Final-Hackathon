@@ -20,16 +20,16 @@ const seedData = async () => {
 
     const admin = await User.create({
       name: "Ahmed Admin",
-      email: "admin@maintainiq.com",
+      email: "admin@equipSense.com",
       password: "Admin123!",
       role: "admin",
     });
 
     const techniciansData = [
-      { name: "Ali Technician", email: "Ali@maintainiq.com" },
-      { name: "Sarah Tech", email: "sarah@maintainiq.com" },
-      { name: "John Mechanic", email: "john@maintainiq.com" },
-      { name: "Maria Support", email: "maria@maintainiq.com" },
+      { name: "Ali Technician", email: "Ali@equipSense.com" },
+      { name: "Sarah Tech", email: "sarah@equipSense.com" },
+      { name: "John Mechanic", email: "john@equipSense.com" },
+      { name: "Maria Support", email: "maria@equipSense.com" },
     ];
 
     const createdTechnicians = [];
@@ -196,8 +196,8 @@ const seedData = async () => {
 
     console.log("✅ Seed data created successfully");
     console.log("-----------------------------------");
-    console.log("Admin login:      admin@maintainiq.com / Admin123!");
-    console.log("Technician login: tech@maintainiq.com / tech123");
+    console.log("Admin login:      admin@equipSense.com / Admin123!");
+    console.log("Technician login: tech@equipSense.com / tech123");
     console.log("(And 3 other technicians with tech123)");
     console.log("-----------------------------------");
     process.exit();
