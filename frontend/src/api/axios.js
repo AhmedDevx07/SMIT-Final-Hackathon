@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://smit-final-hackathon-backend-nu.vercel.app/",
+  baseURL: "https://smit-final-hackathon-backend-nu.vercel.app/api",
 });
 
 api.interceptors.request.use(
