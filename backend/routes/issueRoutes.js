@@ -1,31 +1,25 @@
-import express from "express";
-import {
-  triageComplaint,
-  createIssue,
+const express = require('express');
+const router = express.Router();
+const {
+  reportIssuePublic,
+  getIssues,
+  getIssueById,
   assignIssue,
   updateIssueStatus,
-  getIssues,
-  getDashboardStats,
-} from "../controllers/issueController.js";
-import { protect, authorize } from "../middleware/authMiddleware.js";
+  markCritical,
+  trackPublicIssue,
+} = require('../controllers/issueController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-const router = express.Router();
+// Public routes
+router.post('/public', reportIssuePublic);
+router.get('/public/track/:issueNumber', trackPublicIssue);
 
-router.post("/triage", triageComplaint);
-router.post("/create", createIssue);
-router.get("/", protect, authorize("Admin", "Technician"), getIssues);
-router.get(
-  "/stats",
-  protect,
-  authorize("Admin", "Technician"),
-  getDashboardStats,
-);
-router.put("/assign/:id", protect, authorize("Admin"), assignIssue);
-router.put(
-  "/status/:id",
-  protect,
-  authorize("Technician", "Admin"),
-  updateIssueStatus,
-);
+// Internal routes
+router.get('/', protect, getIssues);
+router.get('/:id', protect, getIssueById);
+router.put('/:id/assign', protect, authorize('admin'), assignIssue);
+router.put('/:id/status', protect, updateIssueStatus);
+router.put('/:id/mark-critical', protect, markCritical);
 
-export default router;
+module.exports = router;

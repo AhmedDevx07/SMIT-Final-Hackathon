@@ -1,33 +1,24 @@
-import express from "express";
-import {
+const express = require('express');
+const router = express.Router();
+const {
   createAsset,
   getAssets,
+  getAssetById,
   getPublicAsset,
   updateAsset,
-  deleteAsset,
+  retireAsset,
   getAssetHistory,
-  getMaintenanceRecords,
-} from "../controllers/assetController.js";
-import { protect, authorize } from "../middleware/authMiddleware.js";
+} = require('../controllers/assetController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-const router = express.Router();
+// Public route MUST be declared before /:id to avoid route collision
+router.get('/public/:assetCode', getPublicAsset);
 
-router.post("/", protect, authorize("Admin"), createAsset);
-router.get("/", protect, authorize("Admin", "Technician"), getAssets);
-router.get("/public/:assetCode", getPublicAsset);
-router.put("/:id", protect, authorize("Admin"), updateAsset);
-router.delete("/:id", protect, authorize("Admin"), deleteAsset);
-router.get(
-  "/:id/history",
-  protect,
-  authorize("Admin", "Technician"),
-  getAssetHistory,
-);
-router.get(
-  "/:id/maintenance-records",
-  protect,
-  authorize("Admin", "Technician"),
-  getMaintenanceRecords,
-);
+router.post('/', protect, authorize('admin'), createAsset);
+router.get('/', protect, getAssets);
+router.get('/:id', protect, getAssetById);
+router.put('/:id', protect, authorize('admin'), updateAsset);
+router.put('/:id/retire', protect, authorize('admin'), retireAsset);
+router.get('/:id/history', protect, getAssetHistory);
 
-export default router;
+module.exports = router;

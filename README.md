@@ -1,112 +1,73 @@
-# MaintainIQ - AI-Powered QR Maintenance & Asset History Platform
+# MaintainIQ — AI-Powered QR Maintenance & Asset History Platform
 
-## Project Overview
-MaintainIQ is an asset maintenance management platform that allows teams to track assets, report issues via QR codes, and leverage AI to triage and prioritize maintenance requests. The platform features role-based access control for Admins and Technicians, along with a public page for submitting issues.
+Track A: Advanced Full-Stack + GenAI submission. Node/Express/MongoDB backend, React/Vite frontend, Redux Toolkit, Framer Motion, OpenAI-powered AI Issue Triage.
 
-## Tech Stack
-- **Frontend:** React, Vite, Tailwind CSS
-- **Backend:** Node.js, Express
-- **Database:** MongoDB, Mongoose
-- **AI:** Google Generative AI (Gemini API)
-- **Other:** QR Code generation, JWT authentication
+## Stack
+- Backend: Node.js, Express, MongoDB (Mongoose), JWT auth, OpenAI API, qrcode
+- Frontend: React (Vite), Redux Toolkit, React Router, Framer Motion, Axios
 
-## Project Structure
+## Setup
+
+### Backend
 ```
-Hackathon/
-├── backend/
-│   ├── controllers/
-│   │   ├── assetController.js
-│   │   ├── issueController.js
-│   │   └── userController.js
-│   ├── middleware/
-│   │   └── authMiddleware.js
-│   ├── models/
-│   │   ├── Asset.js
-│   │   ├── History.js
-│   │   ├── Issue.js
-│   │   ├── MaintenanceRecord.js
-│   │   └── User.js
-│   ├── routes/
-│   │   ├── assetRoutes.js
-│   │   ├── issueRoutes.js
-│   │   └── userRoutes.js
-│   ├── .env
-│   ├── package.json
-│   └── server.js
-└── frontend/
-    ├── public/
-    ├── src/
-    │   ├── App.jsx
-    │   ├── api/
-    │   ├── context/
-    │   ├── pages/
-    │   └── main.jsx
-    ├── .env
-    ├── package.json
-    ├── vite.config.js
-    └── index.html
+cd backend
+npm install
+cp .env.example .env   # then fill in MONGO_URI, JWT_SECRET, OPENAI_API_KEY
+npm run seed            # creates demo admin/technician + 3 demo assets
+npm run dev              # starts on http://localhost:5000
 ```
 
-## Setup Instructions
-### 1. Backend Setup
-1. Navigate to `backend/` directory
-2. Install dependencies: `npm install`
-3. Create a `.env` file in `backend/` with the following variables:
-   ```env
-   PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/maintainiq
-   JWT_SECRET=your_jwt_secret_key
-   GEMINI_API_KEY=your_gemini_api_key
-   ```
-4. Start the backend server: `npm run dev`
-
-### 2. Frontend Setup
-1. Navigate to `frontend/` directory
-2. Install dependencies: `npm install`
-3. Create a `.env` file in `frontend/` with:
-   ```env
-   VITE_API_URL=http://localhost:5000/api
-   ```
-4. Start the frontend dev server: `npm run dev`
+### Frontend
+```
+cd frontend
+npm install
+npm run dev              # starts on http://localhost:5173
+```
 
 ## Demo Credentials
-### Admin User
-- Email: admin@maintainiq.com
-- Password: Admin123!
+- Admin: admin@maintainiq.com / admin123
+- Technician: tech@maintainiq.com / tech123
 
-### Technician User
-- Email: tech@maintainiq.com
-- Password: Tech123!
+## Core Workflow Demonstrated
+1. Admin registers an asset → unique asset code + QR code auto-generated.
+2. Public user scans QR / opens link → safe public asset page, no login required.
+3. User describes a complaint → AI Issue Triage suggests title, category, priority, causes, safe checks.
+4. User reviews/edits AI suggestion before submitting.
+5. Issue appears on Admin dashboard → gets assigned to a technician.
+6. Technician moves the issue through Inspection → Maintenance → adds a maintenance note (required before resolution) → Resolved.
+7. Asset status cascades automatically (Issue Reported → Under Inspection → Under Maintenance → Operational).
+8. Full asset history timeline is preserved and viewable per asset.
 
-## Features
-- Asset management with QR code generation
-- AI-powered issue triage using Google Gemini API
-- Role-based access control (Admin and Technician)
-- Maintenance record tracking
-- Asset history timeline
-- Public asset page for issue reporting
-- Category and location filters
-- Copy public link and open public page functionality
+## Security & Business Rules Enforced (backend, not just UI)
+- JWT auth + role-based `authorize()` middleware on all admin/technician routes.
+- Public routes (`/api/assets/public/:assetCode`, `/api/issues/public`) return only safe fields — no internal notes, costs, or user data.
+- Issue status transitions follow a strict state machine (`VALID_ISSUE_TRANSITIONS` in `issueController.js`) — invalid jumps are rejected with a clear error.
+- An issue cannot be marked Resolved without an existing maintenance log.
+- Maintenance cost cannot be negative; next service date cannot precede last service date.
+- Asset codes and QR mappings are immutable once created — editing name/location never breaks the QR link.
+- OpenAI API key lives only in the backend `.env` — never exposed to the frontend.
+- AI Triage has graceful fallback (timeout / missing key / parse failure never blocks the workflow).
 
-## API Endpoints
-### Users
-- `POST /api/users/register`: Register a new user
-- `POST /api/users/login`: User login
-- `GET /api/users`: Get all users (Admin only)
+## Folder Structure
+```
+backend/
+  config/       → DB connection
+  models/       → User, Asset, Issue, MaintenanceLog, AssetHistory
+  middleware/    → JWT auth, role guard, error handler
+  controllers/   → business logic per module
+  routes/        → Express routers
+  utils/         → asset code / issue number generators, QR generator, history logger
+  seeder.js      → demo data
+  server.js      → entry point
 
-### Assets
-- `POST /api/assets`: Create a new asset (Admin only)
-- `GET /api/assets`: Get all assets (Admin and Technician)
-- `GET /api/assets/public/:assetCode`: Get public asset details (No auth)
-- `PUT /api/assets/:id`: Update asset (Admin only)
-- `DELETE /api/assets/:id`: Delete asset (Admin only)
-- `GET /api/assets/:id/history`: Get asset history (Admin and Technician)
-- `GET /api/assets/:id/maintenance-records`: Get asset maintenance records (Admin and Technician)
+frontend/
+  src/
+    pages/       → Login, AdminDashboard, TechnicianDashboard, PublicAssetPage, AssetDetails
+    components/  → assets/, issues/, maintenance/, layout/
+    redux/       → auth, assets, issues slices
+    services/    → axios instance
+    routes/      → PrivateRoute guard
+```
 
-### Issues
-- `POST /api/issues/create`: Create a new issue
-- `POST /api/issues/triage`: Triage an issue using AI
-- `GET /api/issues`: Get all issues (Admin and Technician)
-- `GET /api/issues/stats`: Get issue statistics
-- `PUT /api/issues/status/:id`: Update issue status
-- `PUT /api/issues/assign/:id`: Assign issue to a technician
+## Notes
+- Evidence/image upload (Cloudinary) and bonus features (AWS, Docker, GitHub Actions, Redis, email, rate limiting) were scoped out to meet the 8-hour hackathon deadline. The core end-to-end workflow above is fully functional.

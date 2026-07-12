@@ -1,52 +1,33 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const { Schema } = mongoose;
-
-const issueSchema = new Schema(
+const issueSchema = new mongoose.Schema(
   {
     issueNumber: {
       type: String,
-      required: [true, "Issue number is required"],
+      required: true,
       unique: true,
-      trim: true,
     },
     asset: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Asset",
-      required: [true, "Asset reference is required"],
+      required: true,
     },
     title: {
       type: String,
-      required: [true, "Title is required"],
-      trim: true,
+      required: true,
     },
     description: {
       type: String,
-      required: [true, "Description is required"],
-      trim: true,
-      minlength: [10, "Description must be at least 10 characters long"],
-    },
-    priority: {
-      type: String,
-      required: [true, "Priority is required"],
-      enum: ["Low", "Medium", "High"],
+      required: true,
     },
     category: {
       type: String,
-      required: [true, "Category is required"],
-      trim: true,
+      default: "General",
     },
-    reporterName: {
+    priority: {
       type: String,
-      trim: true,
-    },
-    reporterContact: {
-      type: String,
-      trim: true,
-    },
-    evidenceUrls: {
-      type: [String],
-      default: [],
+      enum: ["Low", "Medium", "High", "Critical"],
+      default: "Medium",
     },
     status: {
       type: String,
@@ -54,9 +35,7 @@ const issueSchema = new Schema(
         "Reported",
         "Assigned",
         "Inspection Started",
-        "Under Inspection",
         "Maintenance In Progress",
-        "Under Maintenance",
         "Waiting for Parts",
         "Resolved",
         "Closed",
@@ -64,31 +43,33 @@ const issueSchema = new Schema(
       ],
       default: "Reported",
     },
+    reporterName: {
+      type: String,
+      default: "Anonymous",
+    },
+    reporterContact: {
+      type: String,
+      default: "",
+    },
     assignedTechnician: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
-    maintenanceNotes: {
-      type: String,
-      trim: true,
-      default: "",
+    aiSuggestion: {
+      suggestedTitle: String,
+      suggestedCategory: String,
+      suggestedPriority: String,
+      possibleCauses: [String],
+      initialChecks: [String],
+      wasEdited: {
+        type: Boolean,
+        default: false,
+      },
     },
-    cost: {
-      type: Number,
-      default: 0,
-      min: [0, "Cost cannot be negative"],
-    },
-    isAiGenerated: {
-      type: Boolean,
-      default: false,
-    },
+    evidenceUrls: [String],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
-const Issue = mongoose.models.Issue || mongoose.model("Issue", issueSchema);
-
-export default Issue;
+module.exports = mongoose.model("Issue", issueSchema);

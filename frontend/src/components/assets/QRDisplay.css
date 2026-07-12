@@ -1,0 +1,110 @@
+.qr-display {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  text-align: center;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-display::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--color-primary), var(--color-accent));
+}
+
+.qr-image-wrap {
+  background: #ffffff;
+  border-radius: var(--radius);
+  padding: 16px;
+  display: inline-block;
+  margin-bottom: 20px;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+.qr-image-wrap img {
+  width: 200px;
+  height: 200px;
+  display: block;
+}
+
+.qr-label h4 {
+  color: var(--color-text);
+  font-size: 1.15rem;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.qr-code-text {
+  display: block;
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.qr-location {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+}
+
+.qr-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qr-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qr-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.qr-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-glow);
+}
+
+.qr-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.qr-toast {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-primary);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
+}

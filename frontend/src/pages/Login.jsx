@@ -1,200 +1,133 @@
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
-import { getDashboardPath, useAuth } from "../context/AuthContext.jsx";
+import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { loginUser } from '../redux/authSlice';
+import './Login.css';
 
 const Login = () => {
-  const { login, loading, isAuthenticated, user } = useAuth();
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  if (isAuthenticated && user) {
-    return <Navigate to={getDashboardPath(user.role)} replace />;
-  }
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { loading, error } = useSelector((state) => state.auth);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const result = await dispatch(loginUser({ email, password }));
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError("");
-
-    const result = await login(formData.email, formData.password);
-
-    if (!result.success) {
-      setError(result.message);
+    if (loginUser.fulfilled.match(result)) {
+      const role = result.payload.role;
+      navigate(role === 'admin' ? '/admin' : '/technician');
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 theme-grid opacity-30" />
-      <div className="pointer-events-none absolute -left-28 top-10 h-72 w-72 rounded-full bg-indigo-500/25 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-1/4 h-80 w-80 rounded-full bg-violet-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
+    <div className="login-wrapper">
+      <motion.div
+        className="login-brand-panel"
+        initial={{ opacity: 0, x: -40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
+        <div className="brand-glow" />
+        <div className="brand-glow-2" />
+        <span className="brand-kicker">EquipSense Enterprise</span>
+        <h1 className="brand-title">Scan. Diagnose.<br /><span>Resolve.</span></h1>
+        <p className="brand-subtext">
+          Empower your maintenance team with next-generation AI triage. 
+          Every asset gets a digital identity and a permanent history that scales with your infrastructure.
+        </p>
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center">
-        <div className="grid w-full items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <section className="animate-fade-up hidden lg:block">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-200/90 backdrop-blur">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_20px_rgba(74,222,128,0.8)]" />
-                Smart maintenance operations, beautifully streamlined
-              </div>
-
-              <h1 className="mt-8 text-5xl font-semibold leading-tight text-white">
-                A cleaner, faster control center for modern maintenance teams.
-              </h1>
-
-              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-300">
-                Track assets, triage complaints, and coordinate technician
-                workflows from a premium workspace designed to feel calm, sharp,
-                and reliable.
-              </p>
-
-              <div className="mt-10 grid gap-4 sm:grid-cols-2">
-                {[
-                  {
-                    title: "Unified Visibility",
-                    text: "Assets, issues, and triage in one place.",
-                  },
-                  {
-                    title: "AI-Ready Flow",
-                    text: "Turn scanned complaints into structured actions.",
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={item.title}
-                    className={`glass-panel animate-float rounded-3xl p-5 ${index === 1 ? "lg:mt-8" : ""}`}
-                  >
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-300">
-                      {item.title}
-                    </p>
-                    <p className="mt-3 text-sm leading-7 text-slate-300">
-                      {item.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="animate-fade-up">
-            <div className="glass-panel mx-auto w-full max-w-xl rounded-[32px] p-6 shadow-2xl shadow-black/30 sm:p-8">
-              <div className="mb-8">
-                <div className="inline-flex items-center gap-3 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-indigo-200">
-                  AssetCare Cloud
-                </div>
-                <h2 className="mt-6 text-3xl font-semibold text-white sm:text-4xl">
-                  Welcome back
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-slate-300">
-                  Sign in to continue into your operations workspace.
-                </p>
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs font-semibold text-indigo-300 mb-2">
-                    Default Credentials
-                  </p>
-                  <div className="space-y-2 text-xs text-slate-300">
-                    <p>
-                      <span className="font-semibold text-white">Admin:</span>{" "}
-                      admin@maintainiq.com / Admin123!
-                    </p>
-                    <p>
-                      <span className="font-semibold text-white">
-                        Technician:
-                      </span>{" "}
-                      tech@maintainiq.com / Tech123!
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <form className="space-y-5" onSubmit={handleSubmit}>
-                <div className="group relative">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className="peer h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pt-5 text-sm text-white outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
-                    required
-                  />
-                  <label
-                    htmlFor="email"
-                    className="pointer-events-none absolute left-4 top-4 origin-left text-sm text-slate-400 transition-all duration-300 peer-placeholder-shown:top-4 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:scale-75 peer-focus:text-indigo-300 peer-not-placeholder-shown:top-2 peer-not-placeholder-shown:scale-75"
-                  >
-                    Email address
-                  </label>
-                </div>
-
-                <div className="group relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder=" "
-                    className="peer h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-4 pt-5 text-sm text-white outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
-                    required
-                  />
-                  <label
-                    htmlFor="password"
-                    className="pointer-events-none absolute left-4 top-4 origin-left text-sm text-slate-400 transition-all duration-300 peer-placeholder-shown:top-4 peer-placeholder-shown:scale-100 peer-focus:top-2 peer-focus:scale-75 peer-focus:text-indigo-300 peer-not-placeholder-shown:top-2 peer-not-placeholder-shown:scale-75"
-                  >
-                    Password
-                  </label>
-                </div>
-
-                {error ? (
-                  <div className="animate-alert-in rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100 shadow-[0_10px_30px_rgba(239,68,68,0.12)]">
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-400/20 text-xs font-bold text-red-200">
-                        !
-                      </span>
-                      <p className="leading-6">{error}</p>
-                    </div>
-                  </div>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 text-sm font-semibold text-white transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {loading ? (
-                    <>
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-white" />
-                      Signing you in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </button>
-              </form>
-
-              <div className="mt-8 grid gap-3 border-t border-white/10 pt-6 text-sm text-slate-400 sm:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  Secure role-based access
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  AI-assisted triage
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  Live asset visibility
-                </div>
-              </div>
-            </div>
-          </section>
+        <div className="brand-stats">
+          <div className="stat-block">
+            <span className="stat-number">99%</span>
+            <span className="stat-label">Uptime Delivered</span>
+          </div>
+          <div className="stat-block">
+            <span className="stat-number">3x</span>
+            <span className="stat-label">Faster Resolution</span>
+          </div>
         </div>
-      </div>
+      </motion.div>
+
+      <motion.div
+        className="login-form-panel"
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+      >
+        <form className="login-form" onSubmit={handleSubmit}>
+          <h2>Welcome back</h2>
+          <p className="form-subtext">Sign in to your intelligent workspace</p>
+
+          {error && (
+            <motion.div
+              className="error-banner"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              {error}
+            </motion.div>
+          )}
+
+          <div className="input-group">
+            <label htmlFor="email">Email address</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+              required
+            />
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="password">Password</label>
+            <div className="password-field">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
+              <span className="toggle-password" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? 'Hide' : 'Show'}
+              </span>
+            </div>
+          </div>
+
+          <motion.button
+            type="submit"
+            className="login-btn"
+            disabled={loading}
+            whileHover={{ scale: loading ? 1 : 1.02 }}
+            whileTap={{ scale: loading ? 1 : 0.98 }}
+          >
+            {loading ? 'Authenticating...' : 'Sign In'}
+          </motion.button>
+
+          <div className="demo-creds">
+            <strong>Demo Accounts:</strong><br /><br />
+            Admin: <code>admin@maintainiq.com</code> / <code>admin123</code><br /><br />
+            <strong>Technicians:</strong> (Password: <code>tech123</code>)<br />
+            <code>Ali@maintainiq.com</code><br />
+            <code>sarah@maintainiq.com</code><br />
+            <code>john@maintainiq.com</code><br />
+            <code>maria@maintainiq.com</code>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 };

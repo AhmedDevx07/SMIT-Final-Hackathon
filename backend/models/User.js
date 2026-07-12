@@ -1,39 +1,42 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
-const { Schema } = mongoose;
-
-const userSchema = new Schema(
+const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Name is required"],
-      trim: true,
-      minlength: [2, "Name must be at least 2 characters long"],
+      required: true,
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: true,
       unique: true,
-      trim: true,
       lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
-      minlength: [6, "Password must be at least 6 characters long"],
+      required: true,
     },
     role: {
       type: String,
-      enum: ["Admin", "Technician", "Public"],
-      default: "Public",
+      enum: ["admin", "technician"],
+      default: "technician",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
 
-export default User;
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+module.exports = mongoose.model("User", userSchema);

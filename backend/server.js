@@ -1,64 +1,33 @@
-import express from "express";
-import connectDB from "./config/db.js";
-import cors from "cors";
-import dotenv from "dotenv";
-import dns from "dns";
-import bcrypt from "bcryptjs";
-import User from "./models/User.js";
-import userRoutes from "./routes/userRoutes.js";
-import assetRoutes from "./routes/assetRoutes.js";
-import issueRoutes from "./routes/issueRoutes.js";
-
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const connectDB = require("./config/db");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const dns = require("dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 dotenv.config();
-
-// Connect to DB first
-connectDB().then(async () => {
-  // Seed default users
-  try {
-    console.log("Checking for default users...");
-
-    // Delete any existing default users to reset passwords
-    await User.deleteOne({ email: "admin@maintainiq.com" });
-    await User.deleteOne({ email: "tech@maintainiq.com" });
-
-    // Recreate admin user
-    const adminHash = await bcrypt.hash("Admin123!", 10);
-    await User.create({
-      name: "Admin User",
-      email: "admin@maintainiq.com",
-      password: adminHash,
-      role: "Admin",
-    });
-    console.log(
-      "✅ Default admin user reset: admin@maintainiq.com / Admin123!",
-    );
-
-    // Recreate technician user
-    const techHash = await bcrypt.hash("Tech123!", 10);
-    await User.create({
-      name: "Technician User",
-      email: "tech@maintainiq.com",
-      password: techHash,
-      role: "Technician",
-    });
-    console.log(
-      "✅ Default technician user reset: tech@maintainiq.com / Tech123!",
-    );
-  } catch (err) {
-    console.error("❌ Error seeding default users:", err);
-  }
-});
+connectDB();
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
-app.use("/api/users", userRoutes);
-app.use("/api/assets", assetRoutes);
-app.use("/api/issues", issueRoutes);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => res.send("Backend Boilerplate Active"));
+app.get("/", (req, res) => {
+  res.send("MaintainIQ API is running...");
+});
+
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/assets", require("./routes/assetRoutes"));
+app.use("/api/issues", require("./routes/issueRoutes"));
+app.use("/api/maintenance", require("./routes/maintenanceRoutes"));
+app.use("/api/ai", require("./routes/aiRoutes"));
+
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`MaintainIQ server running on port ${PORT}`),
+);

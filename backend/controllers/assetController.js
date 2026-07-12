@@ -1,268 +1,213 @@
-import QRCode from "qrcode";
-import Asset from "../models/Asset.js";
-import History from "../models/History.js";
-import MaintenanceRecord from "../models/MaintenanceRecord.js";
+const Asset = require('../models/Asset');
+const AssetHistory = require('../models/AssetHistory');
+const generateAssetCode = require('../utils/generateAssetCode');
+const generateQRCode = require('../utils/qrGenerator');
+const logHistory = require('../utils/logHistory');
 
-const generateAssetCode = async () => {
-  let assetCode;
-  let existingAsset;
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
-  do {
-    assetCode = `AST-${Date.now().toString().slice(-6)}`;
-    existingAsset = await Asset.findOne({ assetCode });
-  } while (existingAsset);
-
-  return assetCode;
-};
-
+// @desc    Create a new asset (Admin only)
+// @route   POST /api/assets
 const createAsset = async (req, res) => {
   try {
-    const {
-      name,
-      category,
-      location,
-      condition,
-      status,
-      lastServiceDate,
-      nextServiceDate,
-    } = req.body;
+    const { name, category, location, condition, lastServiceDate, nextServiceDate } = req.body;
 
-    if (!name || !category || !location || !condition) {
-      return res.status(400).json({
-        message: "Name, category, location, and condition are required",
-      });
-    }
-
-    if (!process.env.FRONTEND_URL) {
-      return res
-        .status(500)
-        .json({ message: "Frontend URL is not configured" });
+    if (!name || !category || !location) {
+      return res.status(400).json({ message: 'Name, category, and location are required' });
     }
 
     const assetCode = await generateAssetCode();
-    const publicUrl = `${process.env.FRONTEND_URL}/asset/${assetCode}`;
-    const qrCodeUrl = await QRCode.toDataURL(publicUrl);
+    const publicUrl = `${CLIENT_URL}/asset/${assetCode}`;
+    const qrCodeUrl = await generateQRCode(publicUrl);
 
     const asset = await Asset.create({
-      name,
       assetCode,
-      publicSlug: assetCode,
+      name,
       category,
       location,
-      condition,
-      status,
+      condition: condition || 'Good',
+      lastServiceDate: lastServiceDate || null,
+      nextServiceDate: nextServiceDate || null,
       qrCodeUrl,
-      lastServiceDate,
-      nextServiceDate,
+      publicUrl,
     });
 
-    await History.create({
-      asset: asset._id,
-      action: "Asset Registered",
-      actor: req.user._id,
+    await logHistory({
+      assetId: asset._id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      action: 'Asset Registered',
+      details: `Asset "${asset.name}" (${asset.assetCode}) was registered.`,
     });
 
-    return res.status(201).json({
-      message: "Asset created successfully",
-      asset,
-    });
+    res.status(201).json(asset);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to create asset",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Get all assets (with search/filter)
+// @route   GET /api/assets
 const getAssets = async (req, res) => {
   try {
-    const { status, category, location, search } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-    if (category) filter.category = category;
-    if (location) filter.location = location;
+    const { search, status, category, location } = req.query;
+    const query = {};
+
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { assetCode: { $regex: search, $options: "i" } },
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { assetCode: { $regex: search, $options: 'i' } },
       ];
     }
-    const assets = await Asset.find(filter).sort({ createdAt: -1 });
+    if (status) query.status = status;
+    if (category) query.category = category;
+    if (location) query.location = { $regex: location, $options: 'i' };
 
-    return res.status(200).json(assets);
+    const assets = await Asset.find(query)
+      .populate('assignedTechnician', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json(assets);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch assets",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Get single asset by ID (internal, authenticated)
+// @route   GET /api/assets/:id
+const getAssetById = async (req, res) => {
+  try {
+    const asset = await Asset.findById(req.params.id).populate('assignedTechnician', 'name email');
+    if (!asset) {
+      return res.status(404).json({ message: 'Asset not found' });
+    }
+    res.json(asset);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get PUBLIC asset info by assetCode — NO auth, safe fields only
+// @route   GET /api/assets/public/:assetCode
 const getPublicAsset = async (req, res) => {
   try {
-    const { assetCode } = req.params;
-    // Use Mongoose projection to only select safe fields
-    const asset = await Asset.findOne({ assetCode }).select(
-      "name assetCode publicSlug category location condition status lastServiceDate nextServiceDate qrCodeUrl createdAt updatedAt _id",
-    );
+    const asset = await Asset.findOne({ assetCode: req.params.assetCode });
 
     if (!asset) {
-      return res.status(404).json({ message: "Asset not found" });
+      return res.status(404).json({ message: 'Asset not found. Please check the QR code or link.' });
     }
 
-    // Fetch safe history entries (no actor details, no sensitive issue fields)
-    const safeHistory = await History.find({ asset: asset._id })
-      .select("-actor -__v")
+    // Only safe, public-facing fields — never expose internal notes, costs, or user data
+    const safeAsset = {
+      assetCode: asset.assetCode,
+      name: asset.name,
+      category: asset.category,
+      location: asset.location,
+      condition: asset.condition,
+      status: asset.status,
+      lastServiceDate: asset.lastServiceDate,
+      nextServiceDate: asset.nextServiceDate,
+      isRetired: asset.status === 'Retired',
+    };
+
+    const recentHistory = await AssetHistory.find({ asset: asset._id })
       .sort({ createdAt: -1 })
-      .limit(10)
-      .populate({
-        path: "issue",
-        select: "issueNumber title status", // Explicitly exclude maintenanceNotes, cost, etc.
-      });
+      .limit(5)
+      .select('action createdAt');
 
-    // Fetch safe maintenance records
-    const safeMaintenanceRecords = await MaintenanceRecord.find({
-      asset: asset._id,
-    })
-      .select("-technician -__v -cost")
-      .sort({ completedAt: -1 })
-      .limit(10)
-      .populate({
-        path: "issue",
-        select: "issueNumber title status",
-      });
-
-    return res.status(200).json({
-      asset,
-      history: safeHistory,
-      maintenanceRecords: safeMaintenanceRecords,
-    });
+    res.json({ asset: safeAsset, recentActivity: recentHistory });
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch asset",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Update asset details (Admin only) — QR mapping must stay intact
+// @route   PUT /api/assets/:id
 const updateAsset = async (req, res) => {
   try {
-    const { id } = req.params;
-    const {
-      name,
-      category,
-      location,
-      condition,
-      status,
-      lastServiceDate,
-      nextServiceDate,
-    } = req.body;
-
-    const asset = await Asset.findById(id);
+    const asset = await Asset.findById(req.params.id);
     if (!asset) {
-      return res.status(404).json({ message: "Asset not found" });
+      return res.status(404).json({ message: 'Asset not found' });
     }
 
-    const updatedData = {
-      name,
-      category,
-      location,
-      condition,
-      status,
-      lastServiceDate,
-      nextServiceDate,
-    };
-    // Remove undefined fields
-    Object.keys(updatedData).forEach(
-      (key) => updatedData[key] === undefined && delete updatedData[key],
-    );
+    const { name, category, location, condition, assignedTechnician, lastServiceDate, nextServiceDate } = req.body;
 
-    const updatedAsset = await Asset.findByIdAndUpdate(id, updatedData, {
-      new: true,
+    // Business rule: next service date cannot be before last service date
+    if (nextServiceDate && lastServiceDate && new Date(nextServiceDate) < new Date(lastServiceDate)) {
+      return res.status(400).json({ message: 'Next service date cannot be before last service date' });
+    }
+
+    if (name) asset.name = name;
+    if (category) asset.category = category;
+    if (location) asset.location = location;
+    if (condition) asset.condition = condition;
+    if (assignedTechnician !== undefined) asset.assignedTechnician = assignedTechnician;
+    if (lastServiceDate) asset.lastServiceDate = lastServiceDate;
+    if (nextServiceDate) asset.nextServiceDate = nextServiceDate;
+
+    // assetCode, qrCodeUrl, publicUrl are NEVER touched here — QR mapping stays intact permanently
+
+    await asset.save();
+
+    await logHistory({
+      assetId: asset._id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      action: 'Asset Updated',
+      details: `Asset details were edited.`,
     });
 
-    await History.create({
-      asset: updatedAsset._id,
-      action: "Asset Updated",
-      actor: req.user._id,
-    });
-
-    return res.status(200).json({
-      message: "Asset updated successfully",
-      asset: updatedAsset,
-    });
+    res.json(asset);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to update asset",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-const deleteAsset = async (req, res) => {
+// @desc    Retire an asset permanently
+// @route   PUT /api/assets/:id/retire
+const retireAsset = async (req, res) => {
   try {
-    const { id } = req.params;
-    const asset = await Asset.findById(id);
+    const asset = await Asset.findById(req.params.id);
     if (!asset) {
-      return res.status(404).json({ message: "Asset not found" });
+      return res.status(404).json({ message: 'Asset not found' });
     }
 
-    await Asset.findByIdAndDelete(id);
-    // Delete related history and issues? Or keep them for audit? Let's keep them for audit.
+    asset.status = 'Retired';
+    await asset.save();
 
-    await History.create({
-      asset: asset._id,
-      action: "Asset Deleted",
-      actor: req.user._id,
+    await logHistory({
+      assetId: asset._id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      action: 'Asset Retired',
+      details: `Asset was permanently retired from service.`,
     });
 
-    return res.status(200).json({ message: "Asset deleted successfully" });
+    res.json(asset);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to delete asset",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Get full asset history timeline
+// @route   GET /api/assets/:id/history
 const getAssetHistory = async (req, res) => {
   try {
-    const { id } = req.params;
-    const history = await History.find({ asset: id })
-      .populate("actor", "name email")
-      .populate("issue", "issueNumber")
+    const history = await AssetHistory.find({ asset: req.params.id })
+      .populate('issue', 'issueNumber title')
       .sort({ createdAt: -1 });
-    return res.status(200).json(history);
+    res.json(history);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch asset history",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-const getMaintenanceRecords = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const records = await MaintenanceRecord.find({ asset: id })
-      .populate("technician", "name email")
-      .populate("issue", "issueNumber title")
-      .sort({ completedAt: -1 });
-    return res.status(200).json(records);
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch maintenance records",
-      error: error.message,
-    });
-  }
-};
-
-export {
+module.exports = {
   createAsset,
   getAssets,
+  getAssetById,
   getPublicAsset,
   updateAsset,
-  deleteAsset,
+  retireAsset,
   getAssetHistory,
-  getMaintenanceRecords,
 };

@@ -1,562 +1,283 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import Asset from "../models/Asset.js";
-import History from "../models/History.js";
-import Issue from "../models/Issue.js";
-import User from "../models/User.js";
-import MaintenanceRecord from "../models/MaintenanceRecord.js";
+const Issue = require('../models/Issue');
+const Asset = require('../models/Asset');
+const generateIssueNumber = require('../utils/generateIssueNumber');
+const logHistory = require('../utils/logHistory');
 
-const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-
-  if (!apiKey) {
-    return null;
-  }
-
-  return new GoogleGenerativeAI(apiKey);
+// Valid forward transitions for the issue state machine (Reopened can branch back in)
+const VALID_ISSUE_TRANSITIONS = {
+  Reported: ['Assigned'],
+  Assigned: ['Inspection Started'],
+  'Inspection Started': ['Maintenance In Progress', 'Waiting for Parts'],
+  'Maintenance In Progress': ['Waiting for Parts', 'Resolved'],
+  'Waiting for Parts': ['Maintenance In Progress'],
+  Resolved: ['Closed', 'Reopened'],
+  Closed: ['Reopened'],
+  Reopened: ['Assigned', 'Inspection Started'],
 };
 
-const parseAiJson = (rawText) => {
-  const cleanedText = rawText
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  return JSON.parse(cleanedText);
+// Maps issue status changes to the asset status they should trigger
+const ASSET_STATUS_MAP = {
+  Reported: 'Issue Reported',
+  'Inspection Started': 'Under Inspection',
+  'Maintenance In Progress': 'Under Maintenance',
+  Resolved: 'Operational',
 };
 
-const getFallbackTriage = (assetCategory) => ({
-  title: "Reported Issue",
-  category: assetCategory,
-  priority: "Medium",
-  possibleCauses: ["General wear and tear", "Component needs inspection"],
-  initialChecks: [
-    "Inspect the asset visually",
-    "Verify power and connection status",
-  ],
-});
-
-const runWithTimeout = async (promise, timeoutMs = 15000) => {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("AI request timed out")), timeoutMs);
-    }),
-  ]);
-};
-
-const resolveActorId = async (req) => {
-  if (req.user?._id) {
-    return req.user._id;
-  }
-
-  const authHeader = req.headers.authorization;
-  const token =
-    authHeader && authHeader.startsWith("Bearer ")
-      ? authHeader.split(" ")[1]
-      : null;
-
-  if (token && process.env.JWT_SECRET) {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select("_id");
-
-      if (user) {
-        return user._id;
-      }
-    } catch (error) {
-      // Ignore token parsing failures here so public issue creation still works.
-    }
-  }
-
-  const systemEmail = "public.reporter@system.local";
-  let publicUser = await User.findOne({ email: systemEmail }).select("_id");
-
-  if (!publicUser) {
-    const hashedPassword = await bcrypt.hash("public-reporter", 10);
-
-    try {
-      publicUser = await User.create({
-        name: "Public Reporter",
-        email: systemEmail,
-        password: hashedPassword,
-        role: "Public",
-      });
-    } catch (error) {
-      publicUser = await User.findOne({ email: systemEmail }).select("_id");
-    }
-  }
-
-  return publicUser?._id || null;
-};
-
-const generateIssueNumber = async () => {
-  let issueNumber;
-  let existingIssue;
-
-  do {
-    issueNumber = `ISS-${Date.now().toString().slice(-6)}`;
-    existingIssue = await Issue.findOne({ issueNumber });
-  } while (existingIssue);
-
-  return issueNumber;
-};
-
-// Valid status transitions: from -> to[]
-const validStatusTransitions = {
-  Reported: ["Assigned", "Closed"],
-  Assigned: ["Inspection Started", "Closed"],
-  "Inspection Started": [
-    "Under Inspection",
-    "Maintenance In Progress",
-    "Waiting for Parts",
-    "Resolved",
-    "Closed",
-  ],
-  "Under Inspection": [
-    "Maintenance In Progress",
-    "Waiting for Parts",
-    "Resolved",
-    "Closed",
-  ],
-  "Maintenance In Progress": [
-    "Under Maintenance",
-    "Waiting for Parts",
-    "Resolved",
-    "Closed",
-  ],
-  "Under Maintenance": ["Waiting for Parts", "Resolved", "Closed"],
-  "Waiting for Parts": ["Under Maintenance", "Resolved", "Closed"],
-  Resolved: ["Closed", "Reopened"],
-  Closed: ["Reopened"],
-  Reopened: ["Assigned", "Closed"],
-};
-
-const isStatusTransitionValid = (from, to) => {
-  if (!validStatusTransitions[from]) return false;
-  return validStatusTransitions[from].includes(to);
-};
-
-const mapAssetStatus = (issueStatus) => {
-  if (issueStatus === "Resolved" || issueStatus === "Closed") {
-    return "Operational";
-  }
-
-  if (
-    issueStatus === "Under Inspection" ||
-    issueStatus === "Inspection Started"
-  ) {
-    return "Under Inspection";
-  }
-
-  if (
-    issueStatus === "Under Maintenance" ||
-    issueStatus === "Maintenance In Progress" ||
-    issueStatus === "Waiting for Parts"
-  ) {
-    return "Under Maintenance";
-  }
-
-  return "Issue Reported";
-};
-
-const triageComplaint = async (req, res) => {
+// @desc    Report a new issue against an asset (PUBLIC — no auth required)
+// @route   POST /api/issues/public
+const reportIssuePublic = async (req, res) => {
   try {
-    const { assetCode, complaintText } = req.body;
+    const { assetCode, title, description, priority, category, reporterName, reporterContact, aiSuggestion } = req.body;
 
-    if (!assetCode || !complaintText) {
-      return res.status(400).json({
-        message: "Asset code and complaint text are required",
-      });
+    if (!description) {
+      return res.status(400).json({ message: 'Please describe the issue' });
     }
 
     const asset = await Asset.findOne({ assetCode });
-
     if (!asset) {
-      return res.status(404).json({ message: "Asset not found" });
+      return res.status(404).json({ message: 'Asset not found' });
     }
 
-    const fallback = getFallbackTriage(asset.category);
-    let triageResult = fallback;
-
-    try {
-      const genAI = getGeminiClient();
-
-      if (!genAI) {
-        throw new Error("Gemini API key is not configured");
-      }
-
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const prompt = `Act as an expert maintenance AI. Analyze this user complaint: "${complaintText}" for the asset "${asset.name}" (${asset.category}) located at "${asset.location}". Return strictly a valid JSON object with the following fields: title (short summary), category (string), priority (Low, Medium, or High), possibleCauses (array of strings), initialChecks (array of strings). Do not include markdown code block wrapping, return raw JSON string.`;
-
-      const result = await runWithTimeout(model.generateContent(prompt));
-      const response = await result.response;
-      const rawText = response.text();
-      const parsed = parseAiJson(rawText);
-
-      triageResult = {
-        title: parsed.title || fallback.title,
-        category: parsed.category || fallback.category,
-        priority: ["Low", "Medium", "High"].includes(parsed.priority)
-          ? parsed.priority
-          : fallback.priority,
-        possibleCauses: Array.isArray(parsed.possibleCauses)
-          ? parsed.possibleCauses
-          : fallback.possibleCauses,
-        initialChecks: Array.isArray(parsed.initialChecks)
-          ? parsed.initialChecks
-          : fallback.initialChecks,
-      };
-    } catch (error) {
-      triageResult = fallback;
-    }
-
-    return res.status(200).json(triageResult);
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to triage complaint",
-      error: error.message,
-    });
-  }
-};
-
-const createIssue = async (req, res) => {
-  try {
-    const {
-      assetCode,
-      title,
-      description,
-      priority,
-      category,
-      reporterName,
-      reporterContact,
-      evidenceUrls = [],
-      isAiGenerated,
-      possibleCauses = [],
-      initialChecks = [],
-    } = req.body;
-
-    if (!assetCode || !title || !description || !priority || !category) {
-      return res.status(400).json({
-        message:
-          "Asset code, title, description, priority, and category are required",
-      });
-    }
-
-    const asset = await Asset.findOne({ assetCode });
-
-    if (!asset) {
-      return res.status(404).json({ message: "Asset not found" });
-    }
-
-    const actorId = await resolveActorId(req);
-
-    if (!actorId) {
-      return res
-        .status(500)
-        .json({ message: "Unable to resolve history actor" });
+    if (asset.status === 'Retired') {
+      return res.status(400).json({ message: 'This asset is retired and cannot receive new issue reports' });
     }
 
     const issueNumber = await generateIssueNumber();
-    const aiNotes = [];
-
-    if (Array.isArray(possibleCauses) && possibleCauses.length > 0) {
-      aiNotes.push(`Possible Causes: ${possibleCauses.join(", ")}`);
-    }
-
-    if (Array.isArray(initialChecks) && initialChecks.length > 0) {
-      aiNotes.push(`Initial Checks: ${initialChecks.join(", ")}`);
-    }
 
     const issue = await Issue.create({
       issueNumber,
       asset: asset._id,
-      title,
+      title: title || 'Untitled Issue',
       description,
-      priority,
-      category,
-      reporterName,
-      reporterContact,
-      evidenceUrls: Array.isArray(evidenceUrls)
-        ? evidenceUrls
-        : typeof evidenceUrls === "string"
-          ? evidenceUrls
-              .split(",")
-              .map((u) => u.trim())
-              .filter(Boolean)
-          : [],
-      status: "Reported",
-      maintenanceNotes: aiNotes.join("\n"),
-      isAiGenerated: Boolean(isAiGenerated),
+      category: category || 'General',
+      priority: priority || 'Medium',
+      reporterName: reporterName || 'Anonymous',
+      reporterContact: reporterContact || '',
+      aiSuggestion: aiSuggestion || undefined,
+      status: 'Reported',
     });
 
-    asset.status = "Issue Reported";
+    // Business rule: new issue submitted -> asset becomes "Issue Reported"
+    asset.status = 'Issue Reported';
     await asset.save();
 
-    await History.create({
-      asset: asset._id,
-      issue: issue._id,
-      action: "Issue Created",
-      actor: actorId,
+    await logHistory({
+      assetId: asset._id,
+      issueId: issue._id,
+      actorName: reporterName || 'Public Reporter',
+      action: 'Issue Reported',
+      details: `Issue ${issue.issueNumber}: "${issue.title}" was reported.`,
     });
 
-    return res.status(201).json({
-      message: "Issue created successfully",
-      issue,
-    });
+    res.status(201).json(issue);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to create issue",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Get all issues (internal dashboard, with filters)
+// @route   GET /api/issues
+const getIssues = async (req, res) => {
+  try {
+    const { status, priority, assignedTechnician, assetId } = req.query;
+    const query = {};
+
+    if (status) query.status = status;
+    if (priority) query.priority = priority;
+    if (assignedTechnician) query.assignedTechnician = assignedTechnician;
+    if (assetId) query.asset = assetId;
+
+    const issues = await Issue.find(query)
+      .populate('asset', 'name assetCode location')
+      .populate('assignedTechnician', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json(issues);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get single issue by ID
+// @route   GET /api/issues/:id
+const getIssueById = async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id)
+      .populate('asset')
+      .populate('assignedTechnician', 'name email');
+    if (!issue) {
+      return res.status(404).json({ message: 'Issue not found' });
+    }
+    res.json(issue);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Assign an issue to a technician (Admin only)
+// @route   PUT /api/issues/:id/assign
 const assignIssue = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { assignedTechnician } = req.body;
-
-    if (!assignedTechnician) {
-      return res
-        .status(400)
-        .json({ message: "Assigned technician is required" });
-    }
-
-    const issue = await Issue.findById(id);
+    const { technicianId } = req.body;
+    const issue = await Issue.findById(req.params.id);
 
     if (!issue) {
-      return res.status(404).json({ message: "Issue not found" });
+      return res.status(404).json({ message: 'Issue not found' });
     }
 
-    const technician = await User.findById(assignedTechnician);
-
-    if (!technician) {
-      return res.status(404).json({ message: "Technician not found" });
+    if (!VALID_ISSUE_TRANSITIONS[issue.status]?.includes('Assigned') && issue.status !== 'Reported' && issue.status !== 'Reopened') {
+      return res.status(400).json({ message: `Cannot assign an issue with status "${issue.status}"` });
     }
 
-    if (technician.role !== "Technician") {
-      return res
-        .status(400)
-        .json({ message: "Assigned user must be a technician" });
-    }
-
-    issue.assignedTechnician = assignedTechnician;
-    issue.status = "Assigned";
+    issue.assignedTechnician = technicianId;
+    issue.status = 'Assigned';
     await issue.save();
 
-    await History.create({
-      asset: issue.asset,
-      issue: issue._id,
-      action: "Issue Assigned",
-      actor: req.user._id,
+    await logHistory({
+      assetId: issue.asset,
+      issueId: issue._id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      action: 'Issue Assigned',
+      details: `Issue ${issue.issueNumber} was assigned to a technician.`,
     });
 
-    return res.status(200).json({
-      message: "Issue assigned successfully",
-      issue,
-    });
+    res.json(issue);
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to assign issue",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
+// @desc    Update issue status (technician workflow, enforces state machine)
+// @route   PUT /api/issues/:id/status
 const updateIssueStatus = async (req, res) => {
   try {
-    const { id } = req.params;
-    const {
-      status,
-      maintenanceNotes,
-      cost,
-      inspectionNotes,
-      actionsPerformed,
-      partsReplaced,
-      evidenceUrls,
-      completedAt,
-      nextServiceDate,
-    } = req.body;
-
-    if (!status) {
-      return res.status(400).json({ message: "Status is required" });
-    }
-
-    const issue = await Issue.findById(id);
+    const { status } = req.body;
+    const issue = await Issue.findById(req.params.id);
 
     if (!issue) {
-      return res.status(404).json({ message: "Issue not found" });
+      return res.status(404).json({ message: 'Issue not found' });
     }
 
-    // If user is Technician, check they are assigned to this issue
-    if (req.user.role === "Technician") {
-      const assignedId = issue.assignedTechnician
-        ? issue.assignedTechnician.toString()
-        : null;
-      const userId = req.user._id.toString();
-      if (assignedId !== userId) {
-        return res
-          .status(403)
-          .json({ message: "You can only update issues assigned to you" });
-      }
+    // A technician may update only an issue assigned to them
+    if (
+      req.user.role === 'technician' &&
+      issue.assignedTechnician &&
+      issue.assignedTechnician.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: 'You can only update issues assigned to you' });
     }
 
-    // Validate status transition
-    if (!isStatusTransitionValid(issue.status, status)) {
+    // A closed issue may not be edited until reopened
+    if (issue.status === 'Closed' && status !== 'Reopened') {
+      return res.status(400).json({ message: 'Closed issues cannot be edited unless reopened' });
+    }
+
+    // Enforce the state machine — no invalid jumps
+    const allowedNext = VALID_ISSUE_TRANSITIONS[issue.status] || [];
+    if (!allowedNext.includes(status)) {
       return res.status(400).json({
-        message: `Status transition from ${issue.status} to ${status} is not allowed`,
+        message: `Invalid transition: "${issue.status}" cannot move to "${status}". Allowed: ${allowedNext.join(', ') || 'none'}`,
       });
     }
 
-    // Check if maintenance record fields are present when resolving
-    if (status === "Resolved") {
-      if (!inspectionNotes?.trim() || !actionsPerformed?.trim()) {
-        return res.status(400).json({
-          message:
-            "Inspection notes and actions performed are required to resolve an issue",
-        });
+    // Business rule: an issue should not be resolved without a maintenance note existing
+    if (status === 'Resolved') {
+      const MaintenanceLog = require('../models/MaintenanceLog');
+      const hasLog = await MaintenanceLog.findOne({ issue: issue._id });
+      if (!hasLog) {
+        return res.status(400).json({ message: 'Cannot resolve an issue without a maintenance note. Please add one first.' });
       }
     }
 
-    // Update issue fields
     issue.status = status;
+    await issue.save();
 
-    if (typeof maintenanceNotes === "string" && maintenanceNotes.trim()) {
-      issue.maintenanceNotes = issue.maintenanceNotes
-        ? `${issue.maintenanceNotes}\n${maintenanceNotes.trim()}`
-        : maintenanceNotes.trim();
+    // Cascade the corresponding asset status if mapped
+    if (ASSET_STATUS_MAP[status]) {
+      const asset = await Asset.findById(issue.asset);
+      if (asset && asset.status !== 'Retired') {
+        asset.status = ASSET_STATUS_MAP[status];
+        await asset.save();
+      }
     }
 
-    if (typeof cost === "number" && cost >= 0) {
-      issue.cost += cost;
+    await logHistory({
+      assetId: issue.asset,
+      issueId: issue._id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      action: `Issue Status Changed to "${status}"`,
+      details: `Issue ${issue.issueNumber} moved to ${status}.`,
+    });
+
+    res.json(issue);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Mark an asset critically unsafe -> Out of Service (Admin/Technician)
+// @route   PUT /api/issues/:id/mark-critical
+const markCritical = async (req, res) => {
+  try {
+    const issue = await Issue.findById(req.params.id);
+    if (!issue) {
+      return res.status(404).json({ message: 'Issue not found' });
     }
 
+    issue.priority = 'Critical';
     await issue.save();
 
     const asset = await Asset.findById(issue.asset);
-
     if (asset) {
-      asset.status = mapAssetStatus(status);
-      if (status === "Resolved") {
-        const resolvedAt = completedAt ? new Date(completedAt) : new Date();
-        asset.lastServiceDate = resolvedAt;
-
-        // Validate nextServiceDate if provided
-        if (nextServiceDate) {
-          const nextDate = new Date(nextServiceDate);
-          if (nextDate < resolvedAt) {
-            return res.status(400).json({
-              message:
-                "Next service date cannot be before the maintenance completed date",
-            });
-          }
-          asset.nextServiceDate = nextDate;
-        }
-
-        // Create maintenance record
-        await MaintenanceRecord.create({
-          issue: issue._id,
-          asset: asset._id,
-          technician: req.user._id,
-          inspectionNotes: inspectionNotes || "",
-          actionsPerformed: actionsPerformed || "",
-          partsReplaced: Array.isArray(partsReplaced) ? partsReplaced : [],
-          evidenceUrls: Array.isArray(evidenceUrls) ? evidenceUrls : [],
-          cost: cost || 0,
-          completedAt: resolvedAt,
-        });
-      }
+      asset.status = 'Out of Service';
       await asset.save();
     }
 
-    await History.create({
-      asset: issue.asset,
-      issue: issue._id,
-      action: `Issue Status Updated: ${status}`,
-      actor: req.user._id,
+    await logHistory({
+      assetId: issue.asset,
+      issueId: issue._id,
+      actorId: req.user._id,
+      actorName: req.user.name,
+      action: 'Marked Critical — Asset Out of Service',
+      details: `Issue ${issue.issueNumber} was flagged as a critical safety issue.`,
     });
 
-    return res.status(200).json({
-      message: "Issue status updated successfully",
-      issue,
-    });
+    res.json({ issue, asset });
   } catch (error) {
-    return res.status(500).json({
-      message: "Failed to update issue status",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
-const getIssues = async (req, res) => {
+// @desc    Check public status of a reported issue (PUBLIC, safe fields only)
+// @route   GET /api/issues/public/:issueNumber
+const trackPublicIssue = async (req, res) => {
   try {
-    const { status, priority, category, technician, search } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
-    if (category) filter.category = category;
-    if (technician) filter.assignedTechnician = technician;
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { issueNumber: { $regex: search, $options: "i" } },
-      ];
+    const issue = await Issue.findOne({ issueNumber: req.params.issueNumber }).populate('asset', 'name assetCode');
+    if (!issue) {
+      return res.status(404).json({ message: 'Issue not found' });
     }
 
-    const issues = await Issue.find(filter)
-      .populate("asset", "assetCode name")
-      .populate("assignedTechnician", "name")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json(issues);
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch issues",
-      error: error.message,
+    res.json({
+      issueNumber: issue.issueNumber,
+      title: issue.title,
+      status: issue.status,
+      priority: issue.priority,
+      asset: issue.asset,
+      createdAt: issue.createdAt,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-const getDashboardStats = async (req, res) => {
-  try {
-    const totalAssets = await Asset.countDocuments();
-    const openIssues = await Issue.countDocuments({
-      status: { $nin: ["Resolved", "Closed"] },
-    });
-    const resolvedIssues = await Issue.countDocuments({
-      status: { $in: ["Resolved", "Closed"] },
-    });
-    const criticalIssues = await Issue.countDocuments({
-      priority: "High",
-      status: { $nin: ["Resolved", "Closed"] },
-    });
-    const unassignedTasks = await Issue.countDocuments({
-      assignedTechnician: null,
-    });
-
-    return res.status(200).json({
-      totalAssets,
-      openIssues,
-      resolvedIssues,
-      criticalIssues,
-      unassignedTasks,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch dashboard stats",
-      error: error.message,
-    });
-  }
-};
-
-export {
-  triageComplaint,
-  createIssue,
+module.exports = {
+  reportIssuePublic,
+  getIssues,
+  getIssueById,
   assignIssue,
   updateIssueStatus,
-  getIssues,
-  getDashboardStats,
+  markCritical,
+  trackPublicIssue,
 };

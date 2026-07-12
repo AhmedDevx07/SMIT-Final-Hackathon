@@ -1,52 +1,46 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { getDashboardPath, useAuth } from "./context/AuthContext.jsx";
-import AdminDashboard from "./pages/AdminDashboard.jsx";
-import Login from "./pages/Login.jsx";
-import PublicAsset from "./pages/PublicAsset.jsx";
-import TechDashboard from "./pages/TechDashboard.jsx";
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import TechnicianDashboard from './pages/TechDashboard';
+import PublicAssetPage from './pages/PublicAssetPage';
+import AssetDetails from './pages/AssetDetails';
+import PrivateRoute from './routes/PrivateRoute';
 
-const ProtectedRoute = ({ allowedRoles }) => {
-  const { isAuthenticated, user } = useAuth();
-
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!allowedRoles.includes(user.role)) {
-    return <Navigate to={getDashboardPath(user.role)} replace />;
-  }
-
-  return <Outlet />;
-};
-
-const HomeRedirect = () => {
-  const { isAuthenticated, user } = useAuth();
-
-  if (isAuthenticated && user) {
-    return <Navigate to={getDashboardPath(user.role)} replace />;
-  }
-
-  return <Navigate to="/login" replace />;
-};
-
-const App = () => {
+function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/asset/:assetCode" element={<PublicAsset />} />
+      <Route path="/asset/:assetCode" element={<PublicAssetPage />} />
 
-      <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
-        <Route path="/admin" element={<AdminDashboard />} />
-      </Route>
+      <Route
+        path="/admin"
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <AdminDashboard />
+          </PrivateRoute>
+        }
+      />
 
-      <Route element={<ProtectedRoute allowedRoles={["Technician"]} />}>
-        <Route path="/technician" element={<TechDashboard />} />
-      </Route>
+      <Route
+        path="/admin/asset/:id"
+        element={
+          <PrivateRoute allowedRoles={['admin']}>
+            <AssetDetails />
+          </PrivateRoute>
+        }
+      />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="/technician"
+        element={
+          <PrivateRoute allowedRoles={['technician']}>
+            <TechnicianDashboard />
+          </PrivateRoute>
+        }
+      />
     </Routes>
   );
-};
+}
 
 export default App;

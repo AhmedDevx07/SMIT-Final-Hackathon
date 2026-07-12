@@ -1,40 +1,27 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
-const { Schema } = mongoose;
-
-const assetSchema = new Schema(
+const assetSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: [true, "Asset name is required"],
-      trim: true,
-    },
     assetCode: {
       type: String,
-      required: [true, "Asset code is required"],
+      required: true,
       unique: true,
-      trim: true,
     },
-    publicSlug: {
+    name: {
       type: String,
-      required: [true, "Public slug is required"],
-      unique: true,
-      trim: true,
+      required: true,
     },
     category: {
       type: String,
-      required: [true, "Category is required"],
-      trim: true,
+      required: true,
     },
     location: {
       type: String,
-      required: [true, "Location is required"],
-      trim: true,
+      required: true,
     },
     condition: {
       type: String,
-      required: [true, "Condition is required"],
-      trim: true,
+      default: "Good",
     },
     status: {
       type: String,
@@ -48,33 +35,29 @@ const assetSchema = new Schema(
       ],
       default: "Operational",
     },
-    qrCodeUrl: {
-      type: String,
-      required: [true, "QR code URL is required"],
-      trim: true,
+    assignedTechnician: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
     lastServiceDate: {
       type: Date,
+      default: null,
     },
     nextServiceDate: {
       type: Date,
-      validate: {
-        validator(value) {
-          if (!value || !this.lastServiceDate) {
-            return true;
-          }
-
-          return value >= this.lastServiceDate;
-        },
-        message: "Next service date must be on or after last service date",
-      },
+      default: null,
+    },
+    qrCodeUrl: {
+      type: String,
+      default: "",
+    },
+    publicUrl: {
+      type: String,
+      default: "",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true },
 );
 
-const Asset = mongoose.models.Asset || mongoose.model("Asset", assetSchema);
-
-export default Asset;
+module.exports = mongoose.model("Asset", assetSchema);
