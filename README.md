@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛠️ Maintainiq
+# 🛠️ MaintainIQ
 
 ### AI-Powered QR Maintenance & Asset History Platform
 
