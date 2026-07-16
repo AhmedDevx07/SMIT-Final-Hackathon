@@ -1,0 +1,299 @@
+{
+  "info": {
+    "name": "MaintainIQ API",
+    "description": "AI-Powered QR Maintenance & Asset History Platform — SMIT Final Hackathon (Track A)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "assetId", "value": "", "type": "string" },
+    { "key": "assetCode", "value": "", "type": "string" },
+    { "key": "issueId", "value": "", "type": "string" },
+    { "key": "issueNumber", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ahmed Technician\",\n  \"email\": \"tech2@maintainiq.com\",\n  \"password\": \"tech123\",\n  \"role\": \"technician\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.token) pm.collectionVariables.set('token', data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@maintainiq.com\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Get Logged-in User (Me)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        },
+        {
+          "name": "Get Technicians (Admin only)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/auth/technicians", "host": ["{{baseUrl}}"], "path": ["api", "auth", "technicians"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "Create Asset (Admin only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    const asset = data.asset || data;",
+                  "    if (asset._id) pm.collectionVariables.set('assetId', asset._id);",
+                  "    if (asset.assetCode) pm.collectionVariables.set('assetCode', asset.assetCode);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Classroom Projector 01\",\n  \"category\": \"Electronics\",\n  \"location\": \"Room 204, Block B\",\n  \"condition\": \"Good\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/assets", "host": ["{{baseUrl}}"], "path": ["api", "assets"] }
+          }
+        },
+        {
+          "name": "Get All Assets",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/assets", "host": ["{{baseUrl}}"], "path": ["api", "assets"] }
+          }
+        },
+        {
+          "name": "Get Asset By ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/assets/{{assetId}}", "host": ["{{baseUrl}}"], "path": ["api", "assets", "{{assetId}}"] }
+          }
+        },
+        {
+          "name": "Get Public Asset Page (No Auth)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/assets/public/{{assetCode}}", "host": ["{{baseUrl}}"], "path": ["api", "assets", "public", "{{assetCode}}"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Update Asset (Admin only)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Room 205, Block B\",\n  \"condition\": \"Fair\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/assets/{{assetId}}", "host": ["{{baseUrl}}"], "path": ["api", "assets", "{{assetId}}"] }
+          }
+        },
+        {
+          "name": "Retire Asset (Admin only)",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/assets/{{assetId}}/retire", "host": ["{{baseUrl}}"], "path": ["api", "assets", "{{assetId}}", "retire"] }
+          }
+        },
+        {
+          "name": "Get Asset History",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/assets/{{assetId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "assets", "{{assetId}}", "history"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issues",
+      "item": [
+        {
+          "name": "Report Issue (Public, No Auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    const issue = data.issue || data;",
+                  "    if (issue._id) pm.collectionVariables.set('issueId', issue._id);",
+                  "    if (issue.issueNumber) pm.collectionVariables.set('issueNumber', issue.issueNumber);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset\": \"{{assetId}}\",\n  \"title\": \"Water leakage and reduced cooling\",\n  \"description\": \"The projector display is flickering and sometimes does not detect HDMI.\",\n  \"category\": \"Electronics\",\n  \"priority\": \"High\",\n  \"reporterName\": \"John Doe\",\n  \"reporterContact\": \"john@example.com\",\n  \"aiSuggestion\": {\n    \"suggestedTitle\": \"Display flickering / HDMI detection failure\",\n    \"suggestedCategory\": \"Electronics\",\n    \"suggestedPriority\": \"High\",\n    \"possibleCauses\": [\"Loose HDMI cable\", \"Faulty display panel\"],\n    \"initialChecks\": [\"Check HDMI cable connection\", \"Test with another source\"],\n    \"wasEdited\": false\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/issues/public", "host": ["{{baseUrl}}"], "path": ["api", "issues", "public"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Track Public Issue (No Auth)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/issues/public/track/{{issueNumber}}", "host": ["{{baseUrl}}"], "path": ["api", "issues", "public", "track", "{{issueNumber}}"] },
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Get All Issues",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/issues", "host": ["{{baseUrl}}"], "path": ["api", "issues"] }
+          }
+        },
+        {
+          "name": "Get Issue By ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/issues/{{issueId}}", "host": ["{{baseUrl}}"], "path": ["api", "issues", "{{issueId}}"] }
+          }
+        },
+        {
+          "name": "Assign Issue (Admin only)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedTechnician\": \"PASTE_TECHNICIAN_USER_ID_HERE\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/issues/{{issueId}}/assign", "host": ["{{baseUrl}}"], "path": ["api", "issues", "{{issueId}}", "assign"] }
+          }
+        },
+        {
+          "name": "Update Issue Status",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Inspection Started\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/issues/{{issueId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "issues", "{{issueId}}", "status"] }
+          }
+        },
+        {
+          "name": "Mark Issue Critical",
+          "request": {
+            "method": "PUT",
+            "url": { "raw": "{{baseUrl}}/api/issues/{{issueId}}/mark-critical", "host": ["{{baseUrl}}"], "path": ["api", "issues", "{{issueId}}", "mark-critical"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Maintenance",
+      "item": [
+        {
+          "name": "Create Maintenance Log (Technician/Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issue\": \"{{issueId}}\",\n  \"asset\": \"{{assetId}}\",\n  \"findings\": \"HDMI cable found damaged/frayed near connector.\",\n  \"actionTaken\": \"Replaced HDMI cable and tested connection.\",\n  \"partsReplaced\": [\"HDMI Cable\"],\n  \"cost\": 1500,\n  \"finalCondition\": \"Good\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/maintenance", "host": ["{{baseUrl}}"], "path": ["api", "maintenance"] }
+          }
+        },
+        {
+          "name": "Get Logs By Issue",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/maintenance/issue/{{issueId}}", "host": ["{{baseUrl}}"], "path": ["api", "maintenance", "issue", "{{issueId}}"] }
+          }
+        },
+        {
+          "name": "Get Logs By Asset",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/maintenance/asset/{{assetId}}", "host": ["{{baseUrl}}"], "path": ["api", "maintenance", "asset", "{{assetId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Triage",
+      "item": [
+        {
+          "name": "Triage Issue (Public, No Auth)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"complaint\": \"The AC is leaking water, making unusual noise, and cooling is weak.\",\n  \"assetContext\": {\n    \"name\": \"Office AC Unit 03\",\n    \"category\": \"HVAC\",\n    \"condition\": \"Fair\",\n    \"location\": \"2nd Floor Office\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/ai/triage", "host": ["{{baseUrl}}"], "path": ["api", "ai", "triage"] },
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    }
+  ]
+}

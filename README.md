@@ -113,6 +113,27 @@ These rules are enforced **in the backend**, not just hidden away in the UI:
 
 ---
 
+## 🗄️ Database Schema
+
+![Database Schema](./backend/docs/database-schema.png)
+
+Entity-relationship diagram covering `User`, `Asset`, `Issue`, `MaintenanceLog`, and `AssetHistory`, including all foreign-key relationships (e.g. `Issue.asset → Asset._id`, `MaintenanceLog.issue → Issue._id`).
+
+---
+
+## 📮 API Documentation (Postman)
+
+A full Postman collection is included, covering every endpoint (Auth, Assets, Issues, Maintenance, AI Triage), with pre-configured environment variables and auto-chaining test scripts — logging in automatically sets the auth token, and creating an asset or issue automatically sets its ID for the next request.
+
+**Import it:** [`backend/postman/MaintainIQ.postman_collection.json`](./backend/postman/MaintainIQ.postman_collection.json)
+
+1. Open Postman → **Import** → select the file above
+2. Set the `baseUrl` collection variable to the deployed backend URL (or `http://localhost:5000` for local dev)
+3. Run **Auth → Login User** first — the token is captured automatically for all subsequent requests
+4. Run **Assets → Create Asset**, then **Issues → Report Issue (Public)** — their IDs chain automatically into the rest of the collection
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -159,14 +180,17 @@ Try the [live app](https://smit-final-hackathon-gamma.vercel.app/login) instantl
 
 ```
 backend/
-├── config/        → DB connection
-├── models/        → User, Asset, Issue, MaintenanceLog, AssetHistory
-├── middleware/     → JWT auth, role guard, error handler
-├── controllers/    → business logic per module
-├── routes/         → Express routers
-├── utils/          → asset code / issue number generators, QR generator, history logger
-├── seeder.js       → demo data
-└── server.js       → entry point
+├── api/            → Vercel serverless entry point
+├── config/         → DB connection
+├── controllers/     → business logic per module
+├── docs/            → database-schema.png (ER diagram)
+├── middleware/      → JWT auth, role guard, error handler
+├── models/          → User, Asset, Issue, MaintenanceLog, AssetHistory
+├── postman/          → MaintainIQ.postman_collection.json (full API collection)
+├── routes/           → Express routers
+├── utils/            → asset code / issue number generators, QR generator, history logger
+├── seeder.js         → demo data
+└── server.js         → entry point
 
 frontend/
 └── src/
