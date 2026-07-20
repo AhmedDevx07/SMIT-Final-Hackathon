@@ -20,6 +20,15 @@ export const createAsset = createAsyncThunk('assets/create', async (assetData, {
   }
 });
 
+export const deleteAsset = createAsyncThunk('assets/delete', async (id, { rejectWithValue }) => {
+  try {
+    await api.delete(`/assets/${id}`);
+    return id;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Failed to delete asset');
+  }
+});
+
 export const updateAsset = createAsyncThunk('assets/update', async ({ id, updates }, { rejectWithValue }) => {
   try {
     const { data } = await api.put(`/assets/${id}`, updates);
@@ -56,6 +65,9 @@ const assetSlice = createSlice({
       .addCase(updateAsset.fulfilled, (state, action) => {
         const index = state.items.findIndex((a) => a._id === action.payload._id);
         if (index !== -1) state.items[index] = action.payload;
+      })
+      .addCase(deleteAsset.fulfilled, (state, action) => {
+        state.items = state.items.filter((a) => a._id !== action.payload);
       });
   },
 });

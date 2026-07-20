@@ -46,6 +46,7 @@ Built end-to-end — auth, role-based access, AI integration, and a production d
 | 🔁 **Enforced State Machine** | Issue status can only move through valid, predefined transitions |
 | 🧑‍🔧 **Role-Based Dashboards** | Separate, permission-scoped views for Admin and Technician |
 | 📜 **Full Asset History** | Every status change and maintenance action is logged and timeline-viewable |
+| 🎨 **Modern & Responsive UI** | Premium Midnight Blue & Indigo aesthetic built with Tailwind CSS |
 | 🔐 **Secured by the Backend** | Business rules are enforced in controllers/middleware, not just hidden in the UI |
 
 ---
@@ -61,6 +62,7 @@ Built end-to-end — auth, role-based access, AI integration, and a production d
 
 **Frontend**
 - React (Vite)
+- Tailwind CSS
 - Redux Toolkit
 - React Router
 - Framer Motion (animations)
@@ -172,7 +174,7 @@ Try the [live app](https://smit-final-hackathon-gamma.vercel.app/login) instantl
 | Role | Email | Password |
 |---|---|---|
 | 👑 Admin | `admin@maintainiq.com` | `Admin123!` |
-| 🔧 Technician | `tech@maintainiq.com` | `tech123` |
+| 🔧 Technician | `Ali@maintainiq.com` | `tech123` |
 
 ---
 

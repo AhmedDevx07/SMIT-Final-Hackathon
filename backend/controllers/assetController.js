@@ -10,7 +10,7 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 // @route   POST /api/assets
 const createAsset = async (req, res) => {
   try {
-    const { name, category, location, condition, lastServiceDate, nextServiceDate } = req.body;
+    const { name, category, location, condition, lastServiceDate } = req.body;
 
     if (!name || !category || !location) {
       return res.status(400).json({ message: 'Name, category, and location are required' });
@@ -27,7 +27,6 @@ const createAsset = async (req, res) => {
       location,
       condition: condition || 'Good',
       lastServiceDate: lastServiceDate || null,
-      nextServiceDate: nextServiceDate || null,
       qrCodeUrl,
       publicUrl,
     });
@@ -106,7 +105,6 @@ const getPublicAsset = async (req, res) => {
       condition: asset.condition,
       status: asset.status,
       lastServiceDate: asset.lastServiceDate,
-      nextServiceDate: asset.nextServiceDate,
       isRetired: asset.status === 'Retired',
     };
 
@@ -130,12 +128,7 @@ const updateAsset = async (req, res) => {
       return res.status(404).json({ message: 'Asset not found' });
     }
 
-    const { name, category, location, condition, assignedTechnician, lastServiceDate, nextServiceDate } = req.body;
-
-    // Business rule: next service date cannot be before last service date
-    if (nextServiceDate && lastServiceDate && new Date(nextServiceDate) < new Date(lastServiceDate)) {
-      return res.status(400).json({ message: 'Next service date cannot be before last service date' });
-    }
+    const { name, category, location, condition, assignedTechnician, lastServiceDate } = req.body;
 
     if (name) asset.name = name;
     if (category) asset.category = category;
@@ -143,7 +136,6 @@ const updateAsset = async (req, res) => {
     if (condition) asset.condition = condition;
     if (assignedTechnician !== undefined) asset.assignedTechnician = assignedTechnician;
     if (lastServiceDate) asset.lastServiceDate = lastServiceDate;
-    if (nextServiceDate) asset.nextServiceDate = nextServiceDate;
 
     // assetCode, qrCodeUrl, publicUrl are NEVER touched here — QR mapping stays intact permanently
 
@@ -189,11 +181,57 @@ const retireAsset = async (req, res) => {
   }
 };
 
+// @desc    Delete an asset permanently
+// @route   DELETE /api/assets/:id
+const deleteAsset = async (req, res) => {
+  try {
+    const asset = await Asset.findById(req.params.id);
+    if (!asset) {
+      return res.status(404).json({ message: 'Asset not found' });
+    }
+
+    await AssetHistory.deleteMany({ asset: asset._id });
+    await asset.deleteOne();
+
+    res.json({ message: 'Asset removed' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get full asset history timeline
 // @route   GET /api/assets/:id/history
 const getAssetHistory = async (req, res) => {
   try {
     const history = await AssetHistory.find({ asset: req.params.id })
+      .populate('issue', 'issueNumber title')
+      .sort({ createdAt: -1 });
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all asset history timeline globally
+// @route   GET /api/assets/history/all
+const getAllAssetHistory = async (req, res) => {
+  try {
+    const history = await AssetHistory.find()
+      .populate('asset', 'name assetCode')
+      .populate('issue', 'issueNumber title')
+      .sort({ createdAt: -1 });
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all asset history for the logged-in technician
+// @route   GET /api/assets/history/me
+const getTechnicianHistory = async (req, res) => {
+  try {
+    const history = await AssetHistory.find({ actor: req.user._id })
+      .populate('asset', 'name assetCode')
       .populate('issue', 'issueNumber title')
       .sort({ createdAt: -1 });
     res.json(history);
@@ -209,5 +247,8 @@ module.exports = {
   getPublicAsset,
   updateAsset,
   retireAsset,
+  deleteAsset,
   getAssetHistory,
+  getAllAssetHistory,
+  getTechnicianHistory,
 };

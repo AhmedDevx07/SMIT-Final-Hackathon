@@ -44,10 +44,7 @@ const assetSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    nextServiceDate: {
-      type: Date,
-      default: null,
-    },
+
     qrCodeUrl: {
       type: String,
       default: "",
