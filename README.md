@@ -17,7 +17,7 @@ SMIT Final Hackathon
 [![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)](#)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)](#)
 [![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=flat-square&logo=redux&logoColor=white)](#)
-[![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white)](#)
+[![Gemini API](https://img.shields.io/badge/Gemini_API-4285F4?style=flat-square&logo=googlegemini&logoColor=white)](#)
 
 </div>
 
@@ -25,7 +25,7 @@ SMIT Final Hackathon
 
 ## 📖 Overview
 
-**Maintainiq** is a full-stack, AI-assisted asset maintenance system built around **QR codes**. Every physical asset (machine, appliance, equipment) gets a unique QR code — scanning it opens a public page where anyone can report an issue in plain language. An **OpenAI-powered triage engine** instantly classifies the complaint (title, category, priority, likely causes, safety checks), and the issue flows through a **strict, backend-enforced state machine**: `Reported → Under Inspection → Under Maintenance → Operational`, with a complete, auditable history preserved per asset.
+**Maintainiq** is a full-stack, AI-assisted asset maintenance system built around **QR codes**. Every physical asset (machine, appliance, equipment) gets a unique QR code — scanning it opens a public page where anyone can report an issue in plain language. A **Google Gemini-powered triage engine** instantly classifies the complaint (title, category, priority, likely causes, safety checks), and the issue flows through a **strict, backend-enforced state machine**: `Reported → Under Inspection → Under Maintenance → Operational`, with a complete, auditable history preserved per asset.
 
 Built end-to-end — auth, role-based access, AI integration, and a production deployment — within an **8-hour hackathon window**.
 
@@ -41,7 +41,7 @@ Built end-to-end — auth, role-based access, AI integration, and a production d
 |---|---|
 | 🔳 **QR-Based Asset Tracking** | Every asset gets an auto-generated unique code + QR image on creation |
 | 🌐 **Public Reporting, No Login** | Anyone who scans a QR can view safe asset info and report an issue |
-| 🤖 **AI Issue Triage** | OpenAI suggests title, category, priority, probable causes & safe checks from a free-text complaint |
+| 🤖 **AI Issue Triage** | Gemini API suggests title, category, priority, probable causes & safe checks from a free-text complaint |
 | ✅ **Human-in-the-loop** | Users review and edit the AI's suggestion before it's ever submitted |
 | 🔁 **Enforced State Machine** | Issue status can only move through valid, predefined transitions |
 | 🧑‍🔧 **Role-Based Dashboards** | Separate, permission-scoped views for Admin and Technician |
@@ -57,7 +57,7 @@ Built end-to-end — auth, role-based access, AI integration, and a production d
 - Node.js & Express
 - MongoDB with Mongoose
 - JWT Authentication
-- OpenAI API (AI Issue Triage)
+- Google Gemini API (AI Issue Triage)
 - `qrcode` (QR generation)
 
 **Frontend**
@@ -80,7 +80,7 @@ Built end-to-end — auth, role-based access, AI integration, and a production d
        → lands on a safe public asset page (no login required)
 
 3. User describes the complaint
-       → AI Issue Triage suggests title, category, priority, causes & safe checks
+       → AI Issue Triage (Gemini) suggests title, category, priority, causes & safe checks
 
 4. User reviews / edits the AI suggestion
        → then submits the issue
@@ -110,7 +110,7 @@ These rules are enforced **in the backend**, not just hidden away in the UI:
 - ✅ An issue **cannot** be marked Resolved without an existing maintenance log
 - ✅ Maintenance cost can't be negative; next service date can't precede the last service date
 - ✅ Asset codes and QR mappings are **immutable** once created — editing name/location never breaks the QR link
-- ✅ OpenAI API key lives only in the backend `.env` — never exposed to the frontend
+- ✅ Gemini API key lives only in the backend `.env` — never exposed to the frontend
 - ✅ AI Triage has a graceful fallback — a timeout, missing key, or parse failure never blocks the workflow
 
 ---
@@ -141,7 +141,7 @@ A full Postman collection is included, covering every endpoint (Auth, Assets, Is
 ### Prerequisites
 - Node.js (v18+ recommended)
 - MongoDB (local or Atlas)
-- An OpenAI API key
+- A Google Gemini API key
 
 ### 1. Clone the repository
 ```bash
@@ -153,7 +153,7 @@ cd SMIT-Final-Hackathon
 ```bash
 cd backend
 npm install
-cp .env.example .env    # fill in MONGO_URI, JWT_SECRET, OPENAI_API_KEY
+cp .env.example .env    # fill in MONGO_URI, JWT_SECRET, GEMINI_API_KEY
 npm run seed             # creates demo admin/technician + 3 demo assets
 npm run dev               # starts on http://localhost:5000
 ```
