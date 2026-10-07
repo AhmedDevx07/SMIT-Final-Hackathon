@@ -219,9 +219,16 @@ Due to the 8-hour hackathon time limit, the following were intentionally scoped 
 
 ---
 
-## 👤 Author
+ 
+ ## 👨‍💻 Author
 
-**Muhammad Ahmed** — [@AhmedDevx07](https://github.com/AhmedDevx07)
+**Muhammad Ahmed (AhmedDevx07)**  
+ 
+### 🌐 Connect With Me
+
+* 🐙 GitHub: https://github.com/AhmedDevx07  
+* 💼 LinkedIn: https://linkedin.com/in/ahmeddevx07  
+* 🌐 Portfolio: https://ahmeddevx07.vercel.app/
 
 ---
 
