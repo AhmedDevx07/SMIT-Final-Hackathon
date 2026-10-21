@@ -9,6 +9,8 @@ SMIT Final Hackathon
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=vercel)](https://smit-final-hackathon-gamma.vercel.app/login)
 [![Backend](https://img.shields.io/badge/Backend-API-blue?style=for-the-badge&logo=render)](https://smit-final-hackathon-backend-nu.vercel.app/)
+[![CI/CD Pipeline](https://github.com/AhmedDevx07/SMIT-Final-Hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/AhmedDevx07/SMIT-Final-Hackathon/actions)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#-docker-quickstart)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](#license)
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)](#)
@@ -16,6 +18,8 @@ SMIT Final Hackathon
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)](#)
 [![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)](#)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)](#)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](#)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=github-actions&logoColor=white)](#)
 [![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=flat-square&logo=redux&logoColor=white)](#)
 [![Gemini API](https://img.shields.io/badge/Gemini_API-4285F4?style=flat-square&logo=googlegemini&logoColor=white)](#)
 
@@ -138,18 +142,52 @@ A full Postman collection is included, covering every endpoint (Auth, Assets, Is
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### 🐳 Option A: Run with Docker Compose (Recommended)
+
+Run the entire full-stack application (Frontend, Backend, and MongoDB) with a single command:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/AhmedDevx07/SMIT-Final-Hackathon.git
+cd SMIT-Final-Hackathon
+
+# 2. Copy environment template and configure (e.g., your Gemini API key)
+cp .env.example .env
+
+# 3. Start all services (Backend, Frontend, MongoDB)
+docker compose up --build
+```
+
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:5000
+- **MongoDB:** `localhost:27017`
+
+To run the database seeder inside the Docker container:
+```bash
+docker compose exec backend npm run seed
+```
+
+To stop containers:
+```bash
+docker compose down
+```
+
+---
+
+### 💻 Option B: Manual Local Setup
+
+#### Prerequisites
 - Node.js (v18+ recommended)
 - MongoDB (local or Atlas)
 - A Google Gemini API key
 
-### 1. Clone the repository
+#### 1. Clone the repository
 ```bash
 git clone https://github.com/AhmedDevx07/SMIT-Final-Hackathon.git
 cd SMIT-Final-Hackathon
 ```
 
-### 2. Backend setup
+#### 2. Backend setup
 ```bash
 cd backend
 npm install
@@ -158,7 +196,7 @@ npm run seed             # creates demo admin/technician + 3 demo assets
 npm run dev               # starts on http://localhost:5000
 ```
 
-### 3. Frontend setup
+#### 3. Frontend setup
 ```bash
 cd frontend
 npm install
@@ -181,41 +219,51 @@ Try the [live app](https://smit-final-hackathon-gamma.vercel.app/login) instantl
 ## 📁 Folder Structure
 
 ```
+├── .github/
+│   └── workflows/ci.yml → GitHub Actions CI/CD pipeline
+├── docker-compose.yml   → Full-stack orchestration (Frontend + Backend + MongoDB)
+├── .env.example         → Root environment configuration template
+│
 backend/
-├── api/            → Vercel serverless entry point
-├── config/         → DB connection
-├── controllers/     → business logic per module
-├── docs/            → database-schema.png (ER diagram)
-├── middleware/      → JWT auth, role guard, error handler
-├── models/          → User, Asset, Issue, MaintenanceLog, AssetHistory
-├── postman/          → MaintainIQ.postman_collection.json (full API collection)
-├── routes/           → Express routers
-├── utils/            → asset code / issue number generators, QR generator, history logger
-├── seeder.js         → demo data
-└── server.js         → entry point
+├── Dockerfile           → Lightweight Node.js Alpine container
+├── .dockerignore
+├── .env.example         → Backend environment template
+├── api/                 → Vercel serverless entry point
+├── config/              → DB connection
+├── controllers/          → Business logic per module
+├── docs/                 → database-schema.png (ER diagram)
+├── middleware/           → JWT auth, role guard, error handler
+├── models/               → User, Asset, Issue, MaintenanceLog, AssetHistory
+├── postman/              → MaintainIQ.postman_collection.json (full API collection)
+├── routes/                → Express routers
+├── utils/                 → Generators & history logger
+├── seeder.js              → Demo data seeder
+└── server.js              → Express entry point
 
 frontend/
+├── Dockerfile           → Multi-stage build (Vite build + Nginx Alpine)
+├── nginx.conf           → Production Nginx config (SPA routing & gzip)
+├── .dockerignore
+├── .env.example         → Frontend environment template
 └── src/
-    ├── pages/       → Login, AdminDashboard, TechnicianDashboard, PublicAssetPage, AssetDetails
-    ├── components/  → assets/, issues/, maintenance/, layout/
-    ├── redux/       → auth, assets, issues slices
-    ├── services/    → axios instance
-    └── routes/      → PrivateRoute guard
+    ├── pages/           → Login, AdminDashboard, TechnicianDashboard, PublicAssetPage, AssetDetails
+    ├── components/      → assets/, issues/, maintenance/, layout/
+    ├── redux/           → auth, assets, issues slices
+    ├── services/        → Axios client instance
+    └── routes/          → PrivateRoute guard
 ```
 
 ---
 
-## 🗺️ Roadmap / Scoped Out
+## 🗺️ Roadmap & Continuous Improvements
 
-Due to the 8-hour hackathon time limit, the following were intentionally scoped out — the core end-to-end workflow above is fully functional without them:
-
-- 🖼️ Evidence/image upload via Cloudinary
-- ☁️ AWS integration
-- 🐳 Docker containerization
-- ⚙️ GitHub Actions CI/CD
-- ⚡ Redis caching
-- 📧 Email notifications
-- 🚦 Rate limiting
+- [x] 🐳 **Docker Containerization** (Multi-stage Dockerfiles + `docker-compose.yml`)
+- [x] ⚙️ **GitHub Actions CI/CD** (Automated build, lint, syntax check & Docker build test)
+- [ ] 🖼️ Evidence/image upload via Cloudinary
+- [ ] ☁️ AWS S3 / ECS deployment option
+- [ ] ⚡ Redis caching for frequent asset queries
+- [ ] 📧 Email & SMS notifications for technician dispatch
+- [ ] 🚦 API Rate limiting & DDoS protection
 
 ---
 

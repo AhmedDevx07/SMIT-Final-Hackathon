@@ -1,0 +1,70 @@
+services:
+  # ==========================================
+  # Database Service (MongoDB)
+  # ==========================================
+  mongodb:
+    image: mongo:7-jammy
+    container_name: maintainiq-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - maintainiq-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Backend API Service (Node.js / Express)
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maintainiq-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      # Connects to containerized MongoDB by default, or uses MONGO_URI from .env (e.g. Atlas)
+      - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017/maintainiq}
+      - JWT_SECRET=${JWT_SECRET:-maintainiq_default_secret_jwt_key_2024}
+      - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - maintainiq-network
+
+  # ==========================================
+  # Frontend Web Service (React + Vite + Nginx)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: maintainiq-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - maintainiq-network
+
+networks:
+  maintainiq-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
