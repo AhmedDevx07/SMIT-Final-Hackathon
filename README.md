@@ -278,21 +278,8 @@ frontend/
 ```
 
 ---
-
-## 🗺️ Roadmap & Continuous Improvements
-
-- [x] 🐳 **Docker Containerization** (Multi-stage Dockerfiles + `docker-compose.yml`)
-- [x] ⚙️ **GitHub Actions CI/CD** (Automated build, lint, syntax check & Docker build test)
-- [ ] 🖼️ Evidence/image upload via Cloudinary
-- [ ] ☁️ AWS S3 / ECS deployment option
-- [ ] ⚡ Redis caching for frequent asset queries
-- [ ] 📧 Email & SMS notifications for technician dispatch
-- [ ] 🚦 API Rate limiting & DDoS protection
-
----
-
  
- ## 👨‍💻 Author
+## 👨‍💻 Author
 
 **Muhammad Ahmed (AhmedDevx07)**  
  
