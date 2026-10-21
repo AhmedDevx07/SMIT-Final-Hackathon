@@ -8,9 +8,9 @@
 SMIT Final Hackathon
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=vercel)](https://smit-final-hackathon-gamma.vercel.app/login)
-[![Backend](https://img.shields.io/badge/Backend-API-blue?style=for-the-badge&logo=render)](https://smit-final-hackathon-backend-nu.vercel.app/)
+[![Backend](https://img.shields.io/badge/Backend-API-000000?style=for-the-badge&logo=vercel)](https://smit-final-hackathon-backend-nu.vercel.app/)
 [![CI/CD Pipeline](https://github.com/AhmedDevx07/SMIT-Final-Hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/AhmedDevx07/SMIT-Final-Hackathon/actions)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#-docker-quickstart)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#docker-quickstart)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](#license)
 
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)](#)
@@ -71,6 +71,12 @@ Built end-to-end — auth, role-based access, AI integration, and a production d
 - React Router
 - Framer Motion (animations)
 - Axios
+
+**DevOps & Deployment**
+- Docker & Docker Compose (Containerization)
+- Nginx Alpine (Production SPA Web Server & Client Routing)
+- GitHub Actions (Automated CI/CD Workflow)
+- Vercel (Edge Cloud Hosting)
 
 ---
 
@@ -142,16 +148,19 @@ A full Postman collection is included, covering every endpoint (Auth, Assets, Is
 
 ## 🚀 Getting Started
 
+<a id="docker-quickstart"></a>
 ### 🐳 Option A: Run with Docker Compose (Recommended)
 
-Run the entire full-stack application (Frontend, Backend, and MongoDB) with a single command:
+Run the entire full-stack application (Frontend, Backend, and MongoDB) with a single command.
+
+> **Note:** Ensure **Docker Desktop** is open and running on your system before executing the command.
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/AhmedDevx07/SMIT-Final-Hackathon.git
 cd SMIT-Final-Hackathon
 
-# 2. Copy environment template and configure (e.g., your Gemini API key)
+# 2. Copy environment template (optional, defaults work out-of-the-box)
 cp .env.example .env
 
 # 3. Start all services (Backend, Frontend, MongoDB)
@@ -213,6 +222,21 @@ Try the [live app](https://smit-final-hackathon-gamma.vercel.app/login) instantl
 |---|---|---|
 | 👑 Admin | `admin@maintainiq.com` | `Admin123!` |
 | 🔧 Technician | `Ali@maintainiq.com` | `tech123` |
+
+---
+
+## ⚙️ Environment Variables
+
+The project includes pre-configured `.env.example` templates for root, backend, and frontend:
+
+| Variable | Scope | Description | Default / Example |
+|---|---|---|---|
+| `PORT` | Backend | Port the Express API listens on | `5000` |
+| `MONGO_URI` | Backend | MongoDB connection string | `mongodb://mongodb:27017/maintainiq` (or Atlas URI) |
+| `JWT_SECRET` | Backend | Secret key used to sign JWT auth tokens | `super_secure_secret_key` |
+| `CLIENT_URL` | Backend | Frontend URL allowed by CORS & embedded in QR codes | `http://localhost:5173` |
+| `GEMINI_API_KEY` | Backend | Google Gemini API key for AI Issue Triage | `your_gemini_api_key` |
+| `VITE_API_URL` | Frontend | Backend API base URL consumed by Axios | `http://localhost:5000/api` |
 
 ---
 

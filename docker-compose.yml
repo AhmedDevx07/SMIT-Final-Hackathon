@@ -36,7 +36,8 @@ services:
       - MONGO_URI=${MONGO_URI:-mongodb://mongodb:27017/maintainiq}
       - JWT_SECRET=${JWT_SECRET:-maintainiq_default_secret_jwt_key_2024}
       - CLIENT_URL=${CLIENT_URL:-http://localhost:5173}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     depends_on:
       mongodb:
         condition: service_healthy
