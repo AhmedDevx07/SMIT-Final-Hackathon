@@ -7,12 +7,6 @@
 **Track A — Advanced Full-Stack + GenAI Submission**
 SMIT Final Hackathon
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=vercel)](https://smit-final-hackathon-gamma.vercel.app/login)
-[![Backend](https://img.shields.io/badge/Backend-API-000000?style=for-the-badge&logo=vercel)](https://smit-final-hackathon-backend-nu.vercel.app/)
-[![CI/CD Pipeline](https://github.com/AhmedDevx07/SMIT-Final-Hackathon/actions/workflows/ci.yml/badge.svg)](https://github.com/AhmedDevx07/SMIT-Final-Hackathon/actions)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#docker-quickstart)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](#license)
-
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=node.js&logoColor=white)](#)
 [![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white)](#)
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)](#)
